@@ -192,12 +192,14 @@ static LUA_FUNCTION(openssl_error_string)
     lua_pushinteger(L, val);
     lua_pushstring (L, ERR_reason_error_string(val));
     lua_pushstring (L, ERR_lib_error_string   (val));
+    ret = 3;
+#if (OPENSSL_VERSION_NUMBER < 0x30000000L)
     lua_pushstring (L, ERR_func_error_string  (val));
+    ret++;
+#endif
 #ifdef ERR_FATAL_ERROR
     lua_pushboolean(L, ERR_FATAL_ERROR        (val));
-    ret = 5;
-#else
-    ret = 4;
+    ret++;
 #endif
   }
 
@@ -368,7 +370,7 @@ get FIPS mode
 */
 static int openssl_fips_mode(lua_State *L)
 {
-#if defined(LIBRESSL_VERSION_NUMBER)
+#if defined(LIBRESSL_VERSION_NUMBER) || (OPENSSL_VERSION_NUMBER >= 0x30000000L)
   return 0;
 #else
   int ret =0, on = 0;
@@ -451,7 +453,7 @@ static int luaclose_openssl(lua_State *L)
     return 0;
 
 #if OPENSSL_VERSION_NUMBER < 0x10100000L || defined(LIBRESSL_VERSION_NUMBER)
-#if !defined(LIBRESSL_VERSION_NUMBER)
+#if !defined(LIBRESSL_VERSION_NUMBER) && (OPENSSL_VERSION_NUMBER < 0x30000000L)
   FIPS_mode_set(0);
 #endif
 
@@ -562,7 +564,10 @@ LUALIB_API int luaopen_openssl(lua_State*L)
   luaopen_cipher(L);
   lua_setfield(L, -2, "cipher");
 
-  luaopen_hmac(L);
+  luaopen_mac(L);
+  lua_setfield(L, -2, "hmac");
+
+  luaopen_mac(L);
   lua_setfield(L, -2, "hmac");
 
   luaopen_pkey(L);
